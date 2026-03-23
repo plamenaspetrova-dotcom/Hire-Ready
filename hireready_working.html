@@ -1,0 +1,466 @@
+
+<div id="R" style="font-family:system-ui,sans-serif;font-size:14px;color:#111;padding:16px;background:#f0f2f5;border-radius:12px;min-height:500px"></div>
+<script>
+var M='c', CP=0, KP=0, RS=68, DG=null;
+
+var JOBS=[
+  {id:1,t:'Product Manager',co:'Stripe',col:'Interviewing',conf:68,s:[1,1,1,0,0,0,0,0]},
+  {id:2,t:'Senior PM',co:'Revolut',col:'Offer',conf:81,s:[1,1,1,1,1,0,0,0]},
+  {id:3,t:'Product Lead',co:'Noon',col:'Applied',conf:54,s:[1,1,1,1,0,0,0,0]},
+  {id:4,t:'Head of Product',co:'Careem',col:'Saved',conf:0,s:[1,0,0,0,0,0,0,0]}
+];
+var KC=['Saved','Applied','Interviewing','Offer','Accepted'];
+var PS=['JD uploaded','Research','CV adjusted','Cover letter','Applied','Interview invite','Attended','Reply'];
+var CTA={
+  1:{h:'Adjust CV with research',b:'Company research ready.',c:'#FFF8E1',bc:'#FFB300'},
+  3:{h:'Generate cover letter',b:'CV ready — create cover letter.',c:'#E8F5E9',bc:'#43A047'},
+  4:{h:'Ready to apply?',b:'Mark as applied when submitted.',c:'#E3F2FD',bc:'#1E88E5'},
+  5:{h:'Got an interview invite?',b:'Log your date, start prep.',c:'#FFF8E1',bc:'#FFB300'},
+  6:{h:'Book 1:1 before interview',b:'Coach session gives you the edge.',c:'#FFF8E1',bc:'#FFB300'},
+  7:{h:'Log interview feedback',b:'Your coach can help you improve.',c:'#E3F2FD',bc:'#1E88E5'}
+};
+var MEMS=[
+  {id:0,n:'Sara R.',r:'PM roles',av:'SR',bg:'#BBDEFB',fg:'#1565C0',stg:'Interview in 3 days',rd:68,risk:false,hi:true,ho:false,p:5,
+   ch:[{f:'co',t:'Hi Sara! Stripe interview in 3 days — how are you feeling?'},{f:'ca',t:'A bit nervous about the case study.'},{f:'co',t:'Your structure is solid. Focus on quantifying results. Want a 1:1?'}]},
+  {id:1,n:'James M.',r:'Marketing FAANG',av:'JM',bg:'#C8E6C9',fg:'#1B5E20',stg:'Offer received',rd:95,risk:false,hi:false,ho:true,p:8,
+   ch:[{f:'co',t:'Congrats James! Have you thought about negotiating?'},{f:'ca',t:'Is there room?'},{f:'co',t:'Almost always — I think we can get 10-15% more.'}]},
+  {id:2,n:'Leila P.',r:'Finance to Tech',av:'LP',bg:'#FCE4EC',fg:'#880E4F',stg:'CV needs work',rd:45,risk:false,hi:false,ho:false,p:2,
+   ch:[{f:'ca',t:'Struggling to make finance background relevant.'},{f:'co',t:'Your analytical skills are very transferable.'}]},
+  {id:3,n:'Ali K.',r:'Engineering',av:'AK',bg:'#FFF3E0',fg:'#BF360C',stg:'5 days inactive',rd:55,risk:true,hi:true,ho:false,p:5,
+   ch:[{f:'co',t:'Hey Ali — quiet lately. Revolut interview coming up!'}]}
+];
+var DIAGS={
+  cv:{t:'CV/ATS rejection',bg:'#FFEBEE',hc:'#C62828',s:'Your CV is not passing initial screening — keywords, format, or impact statements.',a:['Run CV gap analysis against the specific JD','Rewrite summary to mirror JD language exactly','Add 3-5 quantified achievements to recent roles','Remove tables and columns — stay ATS-friendly'],ub:'Book CV review — €79'},
+  screen:{t:'Recruiter screen rejection',bg:'#FFF8E1',hc:'#E65100',s:'You passed the CV but did not convince on the call — usually about your story.',a:['Prepare a tight 90-second career narrative','Research the company deeply before every call','Practice tone and energy — screens are about fit','Clarify salary expectations in advance'],ub:'Book 1:1 session — €149'},
+  first:{t:'First interview rejection',bg:'#FFF8E1',hc:'#E65100',s:'You made it through the screen but struggled in the structured interview.',a:['Practice 10 core STAR stories','Include a number in every result','Do the full company research deep-dive','Complete at least 3 mock sessions'],ub:'Book 1:1 mock — €149'},
+  final:{t:'Final round rejection',bg:'#E3F2FD',hc:'#0D47A1',s:'You were close — final rounds are often about culture fit or one strong competing candidate.',a:['Request feedback immediately','Review complex answers for hedging','Prepare a 30-60-90 day plan','Ask Yana for a debrief session'],ub:'Book debrief — €99'},
+  offer:{t:'Offer too low',bg:'#E3F2FD',hc:'#0D47A1',s:'You got the offer but the number did not reflect your value.',a:['Do not accept — ask for 48hrs','Use salary benchmarking for a data-backed counter','Prepare your negotiation script','Approach it as a conversation'],ub:'Book negotiation — €99'}
+};
+var ETPLS=[
+  {s:'Following up — [Role] at [Company]',b:'Hi [Name],\n\nI hope you are well. I wanted to follow up on my application for the [Role] position submitted on [Date].\n\nBest regards,\n[Your Name]'},
+  {s:'Thank you — [Role] interview',b:'Hi [Name],\n\nThank you for speaking with me about the [Role] position. I really enjoyed our conversation.\n\nWarm regards,\n[Your Name]'},
+  {s:'Salary negotiation — [Role]',b:'Hi [Name],\n\nThank you for the offer. After reviewing the market rate, I was hoping we could discuss the base salary. Based on my experience, I was expecting closer to [number].\n\nIs there flexibility?\n\nBest,\n[Your Name]'},
+  {s:'Offer acceptance — [Role]',b:'Hi [Name],\n\nI am delighted to formally accept the offer. Thank you for this opportunity.\n\nBest regards,\n[Your Name]'},
+  {s:'Polite decline — [Role]',b:'Hi [Name],\n\nThank you for the offer. After careful consideration I have decided to respectfully decline. I hope our paths cross again.\n\nWarm regards,\n[Your Name]'},
+  {s:'Request feedback after rejection',b:'Hi [Name],\n\nThank you for letting me know. Would you be able to share any feedback on my application?\n\nBest,\n[Your Name]'}
+];
+
+function toast(msg){
+  var t=document.getElementById('T');
+  if(!t){t=document.createElement('div');t.id='T';t.style='position:fixed;bottom:20px;right:20px;background:#2E7D32;color:#fff;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999;font-family:system-ui,sans-serif';document.body.appendChild(t);}
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(t.x);t.x=setTimeout(function(){t.style.display='none';},2500);
+}
+
+function setMode(m){M=m;CP=0;KP=0;draw();}
+function setCP(i){CP=i;draw();}
+function setKP(i){KP=i;draw();}
+
+function draw(){
+  var root=document.getElementById('R');
+  if(!root)return;
+  var isC=M==='c';
+  var cur=isC?CP:KP;
+  var cLabels=['Overview','Job tracker','Applications','Interview prep','CV vault','Email templates','Rejection analyser','Chat'];
+  var kLabels=['Overview','Members','Upsells','Revenue','Settings'];
+  var labels=isC?cLabels:kLabels;
+
+  var html='';
+
+  // Topbar
+  html+='<div style="background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
+  html+='<div style="font-size:18px;font-weight:800;color:#111">Hire<span style="color:#1565C0">Ready</span></div>';
+  html+='<div style="display:flex;background:#f0f0f0;border-radius:8px;padding:3px;gap:2px">';
+  html+='<button onclick="setMode(\'c\')" style="padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:'+(isC?'1px solid #90CAF9':'none')+';background:'+(isC?'#fff':'transparent')+';color:'+(isC?'#1565C0':'#888')+';font-family:inherit">Candidate view</button>';
+  html+='<button onclick="setMode(\'k\')" style="padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:'+(!isC?'1px solid #90CAF9':'none')+';background:'+(!isC?'#fff':'transparent')+';color:'+(!isC?'#1565C0':'#888')+';font-family:inherit">Coach view</button>';
+  html+='</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px"><div style="width:30px;height:30px;border-radius:50%;background:'+(isC?'#BBDEFB':'#C8E6C9')+';color:'+(isC?'#1565C0':'#1B5E20')+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800">'+(isC?'SR':'YS')+'</div><span style="font-size:13px;font-weight:600">'+(isC?'Sara R.':'Yana Senina')+'</span></div>';
+  html+='</div>';
+
+  // Nav tabs
+  html+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #ddd">';
+  labels.forEach(function(l,i){
+    var on=i===cur;
+    html+='<button onclick="'+(isC?'setCP':'setKP')+'('+i+')" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:'+(on?'700':'400')+';cursor:pointer;border:'+(on?'1px solid #90CAF9':'1px solid transparent')+';background:'+(on?'#fff':'transparent')+';color:'+(on?'#1565C0':'#666')+';font-family:inherit">'+l+'</button>';
+  });
+  html+='</div>';
+
+  // Page content
+  if(isC){
+    if(cur===0)html+=pageCandOv();
+    else if(cur===1)html+=pageKanban();
+    else if(cur===2)html+=pageApps();
+    else if(cur===3)html+=pagePrep();
+    else if(cur===4)html+=pageCVV();
+    else if(cur===5)html+=pageEmails();
+    else if(cur===6)html+=pageRej();
+    else if(cur===7)html+=pageChat();
+  } else {
+    if(cur===0)html+=pageCoachOv();
+    else if(cur===1)html+=pageMems();
+    else if(cur===2)html+=pageUpsells();
+    else if(cur===3)html+=pageRev();
+    else if(cur===4)html+=pageSettings();
+  }
+
+  root.innerHTML=html;
+
+  // Post-render
+  if(isC&&cur===1)buildKb();
+  if(isC&&cur===3)bindPT();
+}
+
+function card(inner){return '<div style="background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px 20px;margin-bottom:14px">'+inner+'</div>';}
+function ct(t){return '<div style="font-size:15px;font-weight:700;margin-bottom:12px;color:#111">'+t+'</div>';}
+function statsGrid(items){
+  var h='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">';
+  items.forEach(function(s){h+='<div style="background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px"><div style="font-size:11px;color:#888;margin-bottom:4px">'+s.l+'</div><div style="font-size:24px;font-weight:800;color:'+s.c+'">'+s.v+'</div></div>';});
+  return h+'</div>';
+}
+function abox(head,body,bg,hc,btns){
+  return '<div style="background:'+bg+';border:1px solid '+hc+'44;border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:12px;font-weight:700;color:'+hc+'">'+head+'</div><div style="font-size:11px;color:'+hc+';opacity:.8;margin-top:3px;line-height:1.5">'+body+'</div></div><div style="display:flex;gap:6px;flex-shrink:0">'+(btns||'')+'</div></div>';
+}
+function pbtn(label,bg,fg,onclick){return '<button onclick="'+onclick+'" style="padding:5px 12px;background:'+bg+';color:'+fg+';border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+label+'</button>';}
+function stag(label,bg,fg){return '<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+bg+';color:'+fg+'">'+label+'</span>';}
+
+function pageCandOv(){
+  var h=statsGrid([{l:'Applications',v:'6',c:'#1565C0'},{l:'Interviews',v:'2',c:'#BF360C'},{l:'Offers',v:'1',c:'#2E7D32'},{l:'Readiness',v:RS+'%',c:'#111'}]);
+  h+=abox('Interview at Stripe in 3 days — readiness '+RS+'%','Complete 2 more mock sessions before your interview.','#FFF8E1','#E65100',pbtn('Prep now','#E65100','#fff','setCP(3)'));
+  h+=abox('Book a 1:1 coach session','3x more likely to get an offer with pre-interview coaching.','#E8F5E9','#2E7D32',pbtn('Book 1:1 — €149','#2E7D32','#fff','toast(\'Booking page opening...\')'));
+  h+=abox('Message from Yana','"Your Revolut CV is your strongest — prep that one first."','#E3F2FD','#1565C0',pbtn('Open chat','#1565C0','#fff','setCP(7)'));
+  h+=card(ct('Active applications')+JOBS.map(function(j){
+    var bg=j.conf>=75?'#E8F5E9':j.conf>=60?'#E3F2FD':'#FFF8E1';
+    var fg=j.conf>=75?'#1B5E20':j.conf>=60?'#0D47A1':'#E65100';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f5f5f5"><div><div style="font-size:13px;font-weight:600">'+j.t+' — '+j.co+'</div><div style="font-size:11px;color:#888;margin-top:1px">'+j.col+'</div></div>'+stag(j.col,bg,fg)+'</div>';
+  }).join(''));
+  return h;
+}
+
+function pageKanban(){
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">';
+  h+='<div><div style="font-size:18px;font-weight:700">Job tracker</div><div style="font-size:12px;color:#888;margin-top:2px">Drag cards between columns — coach sees this live</div></div>';
+  h+=pbtn('+ Add','#1565C0','#fff','JOBS.push({id:Date.now(),t:\'New role\',co:\'Company\',col:\'Saved\',conf:0,s:[1,0,0,0,0,0,0,0]});buildKb()');
+  h+='</div><div id="KB" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>';
+  return h;
+}
+
+function buildKb(){
+  var b=document.getElementById('KB');if(!b)return;
+  b.innerHTML='';
+  KC.forEach(function(col){
+    var cs=JOBS.filter(function(j){return j.col===col});
+    var div=document.createElement('div');
+    div.style='background:#f5f5f5;border:1px solid #ddd;border-radius:10px;padding:10px;min-height:130px';
+    div.innerHTML='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span>'+col+'</span><span style="background:#fff;border:1px solid #ddd;border-radius:20px;padding:1px 7px;font-size:10px">'+cs.length+'</span></div>';
+    div.addEventListener('dragover',function(e){e.preventDefault();div.style.border='2px dashed #1565C0';});
+    div.addEventListener('dragleave',function(){div.style.border='1px solid #ddd';});
+    div.addEventListener('drop',function(e){
+      e.preventDefault();div.style.border='1px solid #ddd';
+      if(DG===null)return;
+      var j=JOBS.find(function(x){return x.id===DG});
+      if(j)j.col=col;DG=null;buildKb();
+    });
+    cs.forEach(function(c){
+      var bg=c.conf>=75?'#E8F5E9':c.conf>=60?'#E3F2FD':c.conf>0?'#FFF8E1':'#f0f0f0';
+      var fg=c.conf>=75?'#1B5E20':c.conf>=60?'#0D47A1':c.conf>0?'#E65100':'#666';
+      var kd=document.createElement('div');
+      kd.draggable=true;
+      kd.style='background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:7px;cursor:grab';
+      kd.innerHTML='<div style="font-size:12px;font-weight:600;margin-bottom:2px">'+c.t+'</div><div style="font-size:11px;color:#888;margin-bottom:7px">'+c.co+'</div>'+stag(c.conf>0?c.conf+'% ready':'Not started',bg,fg);
+      kd.addEventListener('dragstart',function(){DG=c.id;kd.style.opacity='0.4';});
+      kd.addEventListener('dragend',function(){kd.style.opacity='1';});
+      div.appendChild(kd);
+    });
+    var add=document.createElement('div');
+    add.style='border:1px dashed #bbb;border-radius:8px;padding:6px;text-align:center;font-size:11px;color:#999;cursor:pointer;margin-top:4px';
+    add.textContent='+ Add';
+    add.onclick=function(){JOBS.push({id:Date.now(),t:'New role',co:'Company',col:col,conf:0,s:[1,0,0,0,0,0,0,0]});buildKb();};
+    div.appendChild(add);
+    b.appendChild(div);
+  });
+}
+
+function pageApps(){
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">';
+  h+='<div style="font-size:18px;font-weight:700">Applications</div>';
+  h+=pbtn('+ Add','#1565C0','#fff','JOBS.push({id:Date.now(),t:\'New role\',co:\'Company\',col:\'Saved\',conf:0,s:[1,0,0,0,0,0,0,0]});setCP(2)');
+  h+='</div>';
+  JOBS.forEach(function(j){
+    var done=j.s.filter(Boolean).length;
+    var sbg=done>=6?'#FFF8E1':done>=4?'#E3F2FD':'#f0f0f0';
+    var sfg=done>=6?'#E65100':done>=4?'#0D47A1':'#666';
+    var flow='';
+    PS.forEach(function(s,i){
+      var isDone=j.s[i],isAct=i===done-1;
+      var dotBg=isDone?'#2E7D32':isAct?'#1565C0':'#fff';
+      var dotFg=(isDone||isAct)?'#fff':'#999';
+      var dotBd=isDone?'#2E7D32':isAct?'#1565C0':'#ccc';
+      var lineC=isDone?'#2E7D32':'#e0e0e0';
+      var titleC=isDone?'#aaa':isAct?'#1565C0':'#333';
+      var ctaH='';
+      if(isDone&&!j.s[i+1]&&CTA[i+1]){
+        var c=CTA[i+1];
+        ctaH='<div style="background:'+c.c+';border:1px solid '+c.bc+'66;border-radius:8px;padding:8px 12px;margin:4px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+          +'<div><div style="font-size:12px;font-weight:700;color:#333">'+c.h+'</div><div style="font-size:11px;color:#555;margin-top:1px">'+c.b+'</div></div>'
+          +'<button onclick="(function(){var j=JOBS.find(function(x){return x.id==='+j.id+'});if(j)j.s['+(i+1)+']=1;setCP(2);})()" style="padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Do it</button></div>';
+      }
+      flow+='<div style="display:flex;align-items:stretch">'
+        +'<div style="display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0">'
+        +'<div onclick="(function(){var j=JOBS.find(function(x){return x.id==='+j.id+'});if(j)j.s['+i+']=1;setCP(2);})()" style="width:24px;height:24px;border-radius:50%;background:'+dotBg+';border:2px solid '+dotBd+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:'+dotFg+';cursor:pointer;z-index:1;flex-shrink:0">'+(isDone?'✓':(i+1))+'</div>'
+        +(i<PS.length-1?'<div style="width:2px;flex:1;background:'+lineC+';margin:2px 0"></div>':'')+'</div>'
+        +'<div style="flex:1;padding:0 0 10px 10px"><div style="font-size:12px;font-weight:600;padding-top:3px;color:'+titleC+'">'+s+'</div>'+ctaH+'</div></div>';
+    });
+    h+='<div style="background:#fff;border:1px solid #ddd;border-radius:10px;margin-bottom:10px;overflow:hidden">'
+      +'<div onclick="var d=document.getElementById(\'apd'+j.id+'\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer">'
+      +'<div><div style="font-size:14px;font-weight:700">'+j.t+' — '+j.co+'</div><div style="font-size:11px;color:#888;margin-top:2px">'+done+' of 8 stages</div></div>'
+      +'<div style="display:flex;align-items:center;gap:10px">'+stag(PS[done-1],sbg,sfg)
+      +'<button style="padding:4px 12px;background:#f0f0f0;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Details</button></div></div>'
+      +'<div id="apd'+j.id+'" style="display:none;border-top:1px solid #f5f5f5;padding:16px">'+flow+'</div></div>';
+  });
+  return h;
+}
+
+function pagePrep(){
+  var h='<div style="font-size:18px;font-weight:700;margin-bottom:14px">Interview prep</div>';
+  h+='<div style="background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;display:flex;align-items:center;gap:18px;margin-bottom:16px">'
+    +'<div id="PSC" style="font-size:32px;font-weight:800;color:#1565C0;min-width:60px;text-align:center">'+RS+'%</div>'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:600;margin-bottom:6px">Readiness score — Stripe PM</div>'
+    +'<div style="height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden;margin-bottom:4px"><div id="PBR" style="height:100%;width:'+RS+'%;background:#1565C0;border-radius:5px"></div></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:#888"><span>0%</span><span style="color:#BF360C;font-weight:700">Target: 80%</span><span>100%</span></div></div></div>';
+  h+='<div id="PTABS" style="display:flex;gap:4px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #ddd">'
+    +'<button data-t="PPM" onclick="switchPT(this)" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid #90CAF9;background:#E3F2FD;color:#1565C0;font-family:inherit">AI mock interview</button>'
+    +'<button data-t="PPC" onclick="switchPT(this)" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:400;cursor:pointer;border:1px solid transparent;background:transparent;color:#666;font-family:inherit">Company questions</button>'
+    +'<button data-t="PPB" onclick="switchPT(this)" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:400;cursor:pointer;border:1px solid transparent;background:transparent;color:#666;font-family:inherit">Behavioural bank</button>'
+    +'</div>';
+  h+='<div id="PPM">'
+    +abox('Want live feedback from Yana?','Book a live mock — real-time feedback from an ex-Google & Meta recruiter.','#E8F5E9','#2E7D32',pbtn('Book 1:1 — €149','#2E7D32','#fff','toast(\'Booking page opening...\')'))
+    +qb('Situational','Tell me about a time you used data to change a product decision.','TIP1','Start with the specific metric. Explain why it surprised you, describe the change and measurable result. Stripe loves quantified outcomes — e.g. "increased conversion by 18%".')
+    +qb('Strategic','How do you prioritise a backlog with competing stakeholder demands?','TIP2','Name a specific framework (RICE or ICE). Stripe is writing-first — mention async documentation. Show you hold your ground with stakeholders while keeping user value central.')
+    +qb('Culture fit','Why Stripe specifically — and why now in your career?','TIP3','Reference "growing the GDP of the internet". Tie your background to MENA expansion. Avoid generic fintech answers — interviewers have heard them hundreds of times.')
+    +'<div style="text-align:center;margin-top:10px">'+pbtn('Mark session complete (+8%)','#1565C0','#fff','boostRS()')+'</div></div>';
+  h+='<div id="PPC" style="display:none">'
+    +'<div style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:14px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#0D47A1;margin-bottom:8px">Stripe interview intelligence</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+stag('3 rounds','#E3F2FD','#0D47A1')+stag('2-3 weeks','#FFF8E1','#E65100')+stag('Writing-first','#EDE7F6','#4527A0')+stag('Case study','#E8F5E9','#1B5E20')+'</div><div style="font-size:12px;color:#1565C0;line-height:1.6">Recruiter screen → hiring manager → final panel with written case study.</div></div>'
+    +qb('Round 1','Walk me through your experience and what brings you to Stripe.','TPCO1','')
+    +qb('Round 2','How would you approach launching Stripe Payments in Saudi Arabia?','TPCO2','Structure: market sizing, SAMA requirements, localisation, partnerships, phased rollout.')+'</div>';
+  h+='<div id="PPB" style="display:none">'
+    +card([['Tell me about a time you failed and what you learned.','#FFEBEE','#C62828','Resilience'],['Describe influencing without authority.','#E3F2FD','#0D47A1','Leadership'],['Decision with incomplete information.','#FFF8E1','#E65100','Judgment'],['How do you prioritise when everything is urgent?','#E8F5E9','#1B5E20','Execution']].map(function(r){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5"><span style="font-size:12px;font-weight:500;flex:1">'+r[0]+'</span>'+stag(r[3],r[1],r[2])+'</div>';
+    }).join(''))
+    +abox('Live behavioural coaching with Yana','60-min mock with real-time feedback on your stories.','#E8F5E9','#2E7D32',pbtn('Book — €149','#2E7D32','#fff','toast(\'Booking page opening...\')'))+'</div>';
+  return h;
+}
+
+function qb(type,question,tipId,tipText){
+  return '<div style="background:#f8f8f8;border-radius:10px;padding:14px;margin-bottom:12px">'
+    +'<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;background:#E3F2FD;color:#0D47A1;margin-bottom:8px">'+type+'</span>'
+    +'<div style="font-size:13px;font-weight:600;margin-bottom:10px">'+question+'</div>'
+    +'<textarea style="width:100%;border:1px solid #ddd;border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:#fff;resize:none;height:52px" placeholder="STAR: Situation → Task → Action → Result..."></textarea>'
+    +'<div style="display:flex;gap:6px;margin-top:8px">'
+    +(tipText?'<button onclick="var e=document.getElementById(\''+tipId+'\');if(e)e.style.display=\'block\'" style="padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Get AI feedback</button>':'')
+    +'<button onclick="boostRS()" style="padding:5px 12px;background:#f0f0f0;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Skip +5%</button></div>'
+    +(tipText?'<div id="'+tipId+'" style="display:none;font-size:11px;color:#1565C0;margin-top:8px;padding:8px 12px;background:#E3F2FD;border-radius:8px;line-height:1.6">'+tipText+'</div>':'')
+    +'</div>';
+}
+
+function switchPT(btn){
+  var t=btn.getAttribute('data-t');
+  document.querySelectorAll('#PTABS button').forEach(function(b){
+    b.style.background='transparent';b.style.border='1px solid transparent';b.style.color='#666';b.style.fontWeight='400';
+  });
+  btn.style.background='#E3F2FD';btn.style.border='1px solid #90CAF9';btn.style.color='#1565C0';btn.style.fontWeight='700';
+  ['PPM','PPC','PPB'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=id===t?'block':'none';});
+}
+
+function bindPT(){
+  document.querySelectorAll('#PTABS button').forEach(function(b){
+    b.onclick=function(){switchPT(b);};
+  });
+}
+
+function boostRS(){
+  RS=Math.min(RS+8,100);
+  var a=document.getElementById('PSC');if(a)a.textContent=RS+'%';
+  var b=document.getElementById('PBR');if(b)b.style.width=RS+'%';
+}
+
+function pageCVV(){
+  var h='<div style="font-size:18px;font-weight:700;margin-bottom:14px">CV vault</div>';
+  h+=card(ct('Master CV')+'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #ddd;border-radius:8px"><div><div style="font-size:12px;font-weight:600">Sara_CV_Master.pdf</div><div style="font-size:11px;color:#888;margin-top:2px">Updated 3 days ago</div></div><div style="display:flex;gap:6px"><button onclick="toast(\'Previewing...\')" style="padding:5px 10px;background:#f0f0f0;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Preview</button>'+pbtn('Export','#1565C0','#fff','toast(\'Exporting...\')')+pbtn('Update','#f0f0f0','#333','toast(\'Update dialog...\')')+'</div></div>');
+  h+=card(ct('Tailored CVs by role')
+    +[{n:'CV — PM at Stripe',m:68,c:'#1565C0'},{n:'CV — Senior PM at Revolut',m:81,c:'#2E7D32'},{n:'CV — Product Lead at Noon',m:54,c:'#BF360C'}].map(function(v){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px"><div><div style="font-size:12px;font-weight:600">'+v.n+'</div><div style="font-size:11px;color:#888">Match '+v.m+'%</div></div><div style="display:flex;align-items:center;gap:8px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="width:'+v.m+'%;height:100%;background:'+v.c+';border-radius:3px"></div></div>'+pbtn('Export','#1565C0','#fff','toast(\'Exporting...\')')+'</div></div>';
+    }).join('')
+    +abox('Get a pro CV review from Yana','Personal rewrite and optimisation within 24hrs.','#E8F5E9','#2E7D32',pbtn('Book review — €79','#2E7D32','#fff','toast(\'Booking CV review...\')')));
+  h+=card(ct('Cover letters')
+    +['Cover letter — Stripe PM','Cover letter — Revolut Senior PM'].map(function(n){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px"><div style="font-size:12px;font-weight:600">'+n+'</div>'+pbtn('Export','#1565C0','#fff','toast(\'Exporting...\')')+'</div>';
+    }).join(''));
+  return h;
+}
+
+function pageEmails(){
+  var h='<div style="font-size:18px;font-weight:700;margin-bottom:6px">Email templates</div><div style="font-size:13px;color:#888;margin-bottom:14px">Click a template — pre-filled from your application details.</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+  ['Post-application follow-up','Post-interview thank you','Salary negotiation','Offer acceptance','Polite decline','Request rejection feedback'].forEach(function(n,i){
+    h+='<div id="EC'+i+'" onclick="selEmail('+i+')" style="background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:12px;cursor:pointer"><div style="font-size:12px;font-weight:700;margin-bottom:3px">'+n+'</div><div style="font-size:11px;color:#888">'+['After 1 week','Within 24hrs','Counter-offer','Acceptance letter','Polite decline','Most never do this'][i]+'</div></div>';
+  });
+  h+='</div><div id="TPREV" style="display:none;background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:16px">'
+    +'<div style="font-size:11px;color:#888;margin-bottom:4px">To</div><input id="TE-TO" type="text" placeholder="Recruiter email" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;margin-bottom:10px"/>'
+    +'<div style="font-size:11px;color:#888;margin-bottom:4px">Subject</div><input id="TE-S" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;margin-bottom:10px"/>'
+    +'<div style="font-size:11px;color:#888;margin-bottom:4px">Message</div><textarea id="TE-B" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:8px;font-size:12px;font-family:inherit;resize:none;height:110px;margin-bottom:12px"></textarea>'
+    +'<div style="display:flex;gap:8px">'+pbtn('Copy email','#1565C0','#fff','toast(\'Copied to clipboard!\')')+pbtn('Regenerate with AI','#f0f0f0','#333','toast(\'Regenerating with AI...\')')+'</div></div>';
+  return h;
+}
+
+function selEmail(i){
+  for(var x=0;x<6;x++){var el=document.getElementById('EC'+x);if(el)el.style.cssText='background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:12px;cursor:pointer';}
+  var sel=document.getElementById('EC'+i);if(sel)sel.style.cssText='background:#fff;border:2px solid #1565C0;border-radius:10px;padding:12px;cursor:pointer';
+  var s=document.getElementById('TE-S');var b=document.getElementById('TE-B');var p=document.getElementById('TPREV');
+  if(s)s.value=ETPLS[i].s;if(b)b.value=ETPLS[i].b;if(p)p.style.display='block';
+}
+
+function pageRej(){
+  return '<div style="font-size:18px;font-weight:700;margin-bottom:6px">Rejection analyser</div><div style="font-size:13px;color:#888;margin-bottom:14px">Turn every rejection into a lesson.</div>'
+  +card(ct('Where were you rejected?')
+    +'<div id="RQ">'
+    +['cv|CV / application — never heard back','screen|Recruiter screen — did not progress','first|First interview — did not progress','final|Final round — so close but no offer','offer|Got offer but it was too low'].map(function(s){
+      var k=s.split('|')[0],l=s.split('|')[1];
+      return '<button onclick="showDiag(\''+k+'\')" style="padding:10px 14px;border:1px solid #ddd;background:#f8f8f8;border-radius:8px;font-size:12px;cursor:pointer;display:block;width:100%;text-align:left;margin-bottom:6px;font-family:inherit;color:#333">'+l+'</button>';
+    }).join('')+'</div>'
+    +'<div id="RR" style="display:none">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div id="RT" style="font-size:15px;font-weight:700">Diagnosis</div>'+pbtn('Analyse another','#f0f0f0','#333','document.getElementById(\'RQ\').style.display=\'block\';document.getElementById(\'RR\').style.display=\'none\'')+'</div>'
+    +'<div id="RD"></div><div id="RA"></div><div id="RU"></div></div>');
+}
+
+function showDiag(k){
+  var d=DIAGS[k];
+  var rq=document.getElementById('RQ');var rr=document.getElementById('RR');
+  if(rq)rq.style.display='none';if(rr)rr.style.display='block';
+  var rd=document.getElementById('RD');
+  if(rd)rd.innerHTML='<div style="background:'+d.bg+';border:1px solid '+d.hc+'44;border-radius:10px;padding:14px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:'+d.hc+';margin-bottom:4px">What likely went wrong</div><div style="font-size:12px;color:'+d.hc+';line-height:1.6;opacity:.85">'+d.s+'</div></div>';
+  var ra=document.getElementById('RA');
+  if(ra){ra.innerHTML='<div style="font-size:12px;font-weight:700;margin-bottom:8px">Your action plan</div>';d.a.forEach(function(a,i){ra.innerHTML+='<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 12px;background:#f8f8f8;border-radius:8px;margin-bottom:6px"><div style="width:20px;height:20px;border-radius:50%;background:#1565C0;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">'+(i+1)+'</div><div style="font-size:12px;line-height:1.5">'+a+'</div></div>';});}
+  var ru=document.getElementById('RU');
+  if(ru)ru.innerHTML=abox(d.ub,'Book a session with Yana — she will help you turn this rejection into your next win.','#E8F5E9','#2E7D32',pbtn('Book now','#2E7D32','#fff','toast(\'Booking session...\')'));
+}
+
+function pageChat(){
+  return '<div style="font-size:18px;font-weight:700;margin-bottom:14px">Chat with your coach</div>'
+  +card('<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f0f0f0">'
+    +'<div style="width:40px;height:40px;border-radius:50%;background:#BBDEFB;color:#1565C0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">YS</div>'
+    +'<div><div style="font-size:13px;font-weight:700">Yana Senina</div><div style="font-size:11px;color:#2E7D32;font-weight:600">● Online now · ex-Google & Meta recruiter</div></div></div>'
+    +'<div id="CMSGS" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;min-height:100px">'
+    +'<div style="max-width:78%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.5;background:#E3F2FD;color:#0D47A1;align-self:flex-start">Hi Sara! Your Stripe interview is in 3 days. How are you feeling about it?</div>'
+    +'<div style="max-width:78%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.5;background:#f0f0f0;color:#333;align-self:flex-end">A bit nervous about the case study round honestly.</div>'
+    +'<div style="max-width:78%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.5;background:#E3F2FD;color:#0D47A1;align-self:flex-start">Your structure is solid — focus on quantifying your results. Want to book a 1:1 tomorrow?</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px"><input id="CINP" type="text" placeholder="Message Yana..." style="flex:1;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:12px;font-family:inherit" onkeydown="if(event.key===\'Enter\')sendChat()"/>'+pbtn('Send','#1565C0','#fff','sendChat()')+'</div>');
+}
+
+function sendChat(){
+  var i=document.getElementById('CINP');if(!i||!i.value.trim())return;
+  var m=document.getElementById('CMSGS');
+  if(m)m.innerHTML+='<div style="max-width:78%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.5;background:#f0f0f0;color:#333;align-self:flex-end">'+i.value+'</div>';
+  i.value='';
+  setTimeout(function(){var m2=document.getElementById('CMSGS');if(m2)m2.innerHTML+='<div style="max-width:78%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.5;background:#E3F2FD;color:#0D47A1;align-self:flex-start">Thanks for sharing! I will review this and get back to you shortly.</div>';},800);
+}
+
+function pageCoachOv(){
+  var h=statsGrid([{l:'Active members',v:'24',c:'#1565C0'},{l:'Interviews this week',v:'7',c:'#BF360C'},{l:'Upsell opportunities',v:'5',c:'#2E7D32'},{l:'Revenue this month',v:'€6,216',c:'#111'}]);
+  h+=card(ct('Action needed today')
+    +abox('Sara R. — Stripe interview in 3 days, readiness 68%','Suggest a 1:1 session now while there is still time.','#FFF8E1','#E65100','<button onclick="setKP(1)" style="padding:5px 10px;background:#f0f0f0;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">View</button>'+pbtn('Send upsell','#E65100','#fff','toast(\'Upsell sent to Sara!\')'))
+    +abox('Ali K. — 5 days inactive, at risk of dropping off','Send a motivational nudge to re-engage.','#FFF8E1','#E65100',pbtn('Send nudge','#E65100','#fff','toast(\'Nudge sent to Ali!\')'))
+    +abox('James M. — offer from Revolut today','Perfect moment for a negotiation strategy session.','#E3F2FD','#1565C0',pbtn('Send upsell','#1565C0','#fff','toast(\'Upsell sent to James!\')'))
+    +abox('Leila P. — completed CV for 3 roles','Send encouragement to maintain momentum.','#E8F5E9','#2E7D32',pbtn('Send message','#2E7D32','#fff','toast(\'Message sent to Leila!\')')));
+  h+=card(ct('Members at a glance')+MEMS.map(function(m){
+    var rc=m.rd>=75?'#2E7D32':m.rd>=60?'#1565C0':'#BF360C';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f5f5">'
+      +'<div style="width:32px;height:32px;border-radius:50%;background:'+m.bg+';color:'+m.fg+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+m.av+'</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+m.n+'</div><div style="font-size:11px;color:#888">'+m.r+'</div></div>'
+      +stag(m.stg,m.rd>=75?'#E8F5E9':m.rd>=60?'#FFF8E1':'#FFEBEE',m.rd>=75?'#1B5E20':m.rd>=60?'#E65100':'#B71C1C')
+      +'<div style="text-align:right;min-width:55px"><div style="font-size:11px;color:#888">'+m.rd+'%</div><div style="width:55px;height:5px;background:#f0f0f0;border-radius:3px;margin-top:3px"><div style="width:'+m.rd+'%;height:100%;background:'+rc+';border-radius:3px"></div></div></div></div>';
+  }).join(''));
+  return h;
+}
+
+function pageMems(){
+  var rows=MEMS.map(function(m){
+    var rc=m.rd>=75?'#2E7D32':m.rd>=60?'#1565C0':'#BF360C';
+    var pm=PS.map(function(s,i){
+      var done=i<m.p,act=i===m.p-1;
+      return '<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:'+(done?(act?'#E3F2FD':'#E8F5E9'):'#f0f0f0')+';color:'+(done?(act?'#0D47A1':'#1B5E20'):'#888')+'">'+s+'</span>'+(i<PS.length-1?'<span style="font-size:9px;color:#ccc;padding:0 2px">›</span>':'');
+    }).join('');
+    var up='';
+    if(m.hi&&m.rd<80)up=abox('Suggest 1:1 coaching — readiness '+m.rd+'%','A session now could make the difference.','#FFF8E1','#E65100',pbtn('Send — €149','#E65100','#fff','toast(\'Upsell sent to '+m.n.split(' ')[0]+'!\')'));
+    else if(m.ho)up=abox('Suggest negotiation session — offer received','Market data shows 10-15% room.','#E8F5E9','#2E7D32',pbtn('Send — €99','#2E7D32','#fff','toast(\'Upsell sent!\')'));
+    else if(m.rd<60)up=abox('Suggest CV pro review — score '+m.rd+'%','AI flagged missing keywords.','#E3F2FD','#1565C0',pbtn('Send — €79','#1565C0','#fff','toast(\'CV review offer sent!\')'));
+    var chats=m.ch.map(function(c){
+      var isCo=c.f==='co';
+      return '<div style="max-width:78%;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.4;background:'+(isCo?'#E3F2FD':'#f0f0f0')+';color:'+(isCo?'#0D47A1':'#333')+';align-self:'+(isCo?'flex-start':'flex-end')+'">'+c.t+'</div>';
+    }).join('');
+    return '<div>'
+      +'<div onclick="var d=document.getElementById(\'MD'+m.id+'\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #f5f5f5;cursor:pointer">'
+      +'<div style="width:32px;height:32px;border-radius:50%;background:'+m.bg+';color:'+m.fg+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+m.av+'</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+m.n+(m.risk?' <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#FFEBEE;color:#B71C1C;font-weight:700;margin-left:4px">At risk</span>':'')+'</div><div style="font-size:11px;color:#888">'+m.r+'</div></div>'
+      +stag(m.stg,m.rd>=75?'#E8F5E9':m.rd>=60?'#FFF8E1':'#FFEBEE',m.rd>=75?'#1B5E20':m.rd>=60?'#E65100':'#B71C1C')
+      +'<div style="text-align:right;min-width:55px"><div style="font-size:11px;color:#888">'+m.rd+'%</div><div style="width:55px;height:5px;background:#f0f0f0;border-radius:3px;margin-top:3px"><div style="width:'+m.rd+'%;height:100%;background:'+rc+';border-radius:3px"></div></div></div></div>'
+      +'<div id="MD'+m.id+'" style="display:none;padding:14px 16px;background:#fafafa;border-bottom:1px solid #f0f0f0">'
+      +'<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:12px">'+pm+'</div>'
+      +up
+      +'<div style="border-top:1px solid #eee;padding-top:12px"><div style="font-size:12px;font-weight:700;color:#888;margin-bottom:8px">Chat</div>'
+      +'<div id="MCH'+m.id+'" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">'+chats+'</div>'
+      +'<div style="display:flex;gap:6px"><input id="MI'+m.id+'" type="text" placeholder="Message '+m.n.split(' ')[0]+'..." style="flex:1;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit"/>'
+      +'<button onclick="(function(){var i=document.getElementById(\'MI'+m.id+'\');if(i&&i.value.trim()){var c=document.getElementById(\'MCH'+m.id+'\');if(c)c.innerHTML+=\'<div style=max-width:78%;padding:8px 12px;border-radius:10px;font-size:12px;background:#E3F2FD;color:#0D47A1;align-self:flex-start>\'+i.value+\'</div>\';i.value=\'\';}})()\" style="padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Send</button></div></div>'
+      +'<div style="margin-top:10px">'+pbtn('Full profile','#1565C0','#fff','toast(\'Opening full profile...\')')+'</div></div></div>';
+  }).join('');
+  return '<div style="font-size:18px;font-weight:700;margin-bottom:14px">Members</div>'
+    +'<div style="background:#fff;border:1px solid #ddd;border-radius:10px;overflow:hidden">'+rows+'</div>';
+}
+
+function pageUpsells(){
+  return '<div style="font-size:18px;font-weight:700;margin-bottom:6px">Upsell opportunities</div>'
+  +'<div style="font-size:13px;color:#888;margin-bottom:14px">Members most likely to convert right now.</div>'
+  +card(ct('1:1 interview coaching')+'<div style="font-size:12px;color:#888;margin-top:-8px;margin-bottom:12px">Readiness below 80% with upcoming interview</div>'
+    +abox('Sara R. — Stripe in 3 days, 68% ready','Completed 2 mocks but struggles with case study.','#FFF8E1','#E65100',pbtn('Send — €149','#E65100','#fff','toast(\'Upsell sent to Sara!\')'))
+    +abox('Ali K. — Revolut in 6 days, 55% ready','Has not started interview prep yet.','#FFF8E1','#E65100',pbtn('Send — €149','#E65100','#fff','toast(\'Upsell sent to Ali!\')')))
+  +card(ct('CV pro review')+'<div style="font-size:12px;color:#888;margin-top:-8px;margin-bottom:12px">Match scores below 60%</div>'
+    +abox('Leila P. — CV match score 54%','AI flagged missing keywords and weak impact statements.','#E3F2FD','#1565C0',pbtn('Send — €79','#1565C0','#fff','toast(\'CV review sent to Leila!\')')))
+  +card(ct('Offer negotiation')+'<div style="font-size:12px;color:#888;margin-top:-8px;margin-bottom:12px">Members who just received an offer</div>'
+    +abox('James M. — offer from Revolut today','Market data shows 10-15% negotiation room.','#E8F5E9','#2E7D32',pbtn('Send — €99','#2E7D32','#fff','toast(\'Negotiation offer sent!\')')));
+}
+
+function pageRev(){
+  return '<div style="font-size:18px;font-weight:700;margin-bottom:14px">Revenue</div>'
+  +statsGrid([{l:'Subscriptions (24)',v:'€4,776',c:'#1565C0'},{l:'1:1 sessions',v:'€1,045',c:'#2E7D32'},{l:'CV reviews',v:'€395',c:'#2E7D32'},{l:'Total this month',v:'€6,216',c:'#111'}])
+  +card(ct('Recent transactions')
+    +[['Sara R.','Monthly subscription','€199'],['James M.','1:1 negotiation session','€99'],['Leila P.','CV pro review','€79'],['Ali K.','Monthly subscription','€199'],['Maria T.','1:1 mock interview session','€149']].map(function(r){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f5f5f5"><div><div style="font-size:13px;font-weight:600">'+r[0]+'</div><div style="font-size:11px;color:#888">'+r[1]+'</div></div><div style="font-size:14px;font-weight:700;color:#2E7D32">'+r[2]+'</div></div>';
+    }).join(''))
+  +card(ct('Revenue breakdown')+'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
+    +'<div>'+[['Subscriptions','77%','#1565C0'],['1:1 sessions','17%','#2E7D32'],['CV reviews','6%','#BF360C']].map(function(r){
+      return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>'+r[0]+'</span><span style="font-weight:700">'+r[1]+'</span></div><div style="height:8px;background:#f0f0f0;border-radius:4px"><div style="width:'+r[1]+';height:100%;background:'+r[2]+';border-radius:4px"></div></div></div>';
+    }).join('')+'</div>'
+    +'<div><div style="font-size:12px;color:#888;margin-bottom:6px">Upsell conversion</div><div style="font-size:36px;font-weight:800;color:#2E7D32;margin-bottom:4px">38%</div><div style="font-size:12px;color:#888;line-height:1.6">of members who received an upsell purchased a session</div><div style="margin-top:10px;font-size:12px;color:#888">Avg value: <span style="font-weight:700;color:#111">€121</span></div></div></div>');
+}
+
+function pageSettings(){
+  return '<div style="font-size:18px;font-weight:700;margin-bottom:14px">Settings</div>'
+  +card(ct('Coaching methodology')+'<div style="font-size:13px;color:#888;margin-bottom:12px">This shapes how the AI speaks to your members — your voice, not generic advice.</div>'
+    +'<div style="font-size:11px;color:#888;margin-bottom:4px">Coaching philosophy</div>'
+    +'<textarea style="width:100%;border:1px solid #ddd;border-radius:8px;padding:8px;font-size:12px;font-family:inherit;resize:none;height:80px;margin-bottom:12px">I help professionals land roles at top-tier companies by positioning their unique story with confidence. I focus on authentic personal branding, strategic networking, and data-backed negotiation.</textarea>'
+    +'<div style="font-size:11px;color:#888;margin-bottom:4px">Specialisations</div>'
+    +'<input type="text" value="Big Tech, Fintech, Consulting, Tech transitions" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;margin-bottom:12px"/>'
+    +'<div style="font-size:11px;color:#888;margin-bottom:8px">Uploaded resources (AI learns from these)</div>'
+    +['Google_interview_framework.pdf','Meta_hiring_criteria_notes.pdf'].map(function(f){return '<div style="background:#f8f8f8;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;font-weight:500">'+f+pbtn('Remove','#f0f0f0','#333','toast(\'Removed\')')+'</div>';}).join('')
+    +'<div style="margin-top:4px">'+pbtn('+ Upload resource','#1565C0','#fff','toast(\'Upload dialog opening...\')')+'</div>')
+  +card(ct('Automated messages')
+    +[['Nudge after 3 days no login','Auto-sent to members who have gone quiet'],['Upsell when interview booked','Suggests 1:1 when member logs interview date'],['Negotiation upsell on offer received','Sent when member marks offer received'],['CV review upsell when match below 60%','Suggests pro review when score is low']].map(function(r){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f5f5f5;gap:12px"><div><div style="font-size:13px;font-weight:600;margin-bottom:2px">'+r[0]+'</div><div style="font-size:12px;color:#888">'+r[1]+'</div></div><div onclick="this.dataset.on=this.dataset.on===\'1\'?\'0\':\'1\';this.style.background=this.dataset.on===\'1\'?\'#2E7D32\':\'#ddd\'" data-on="1" style="width:34px;height:18px;border-radius:18px;background:#2E7D32;cursor:pointer;position:relative;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:white;position:absolute;top:3px;right:3px"></div></div></div>';
+    }).join(''))
+  +card(ct('Branding')
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f5f5f5;gap:12px"><div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Portal name</div><div style="font-size:12px;color:#888">Members see this instead of HireReady</div></div><input type="text" value="Recruitment Backstage — Career Club" style="width:220px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit"/></div>'
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:12px 0;gap:12px"><div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Booking link</div><div style="font-size:12px;color:#888">Shown in all upsell prompts</div></div><input type="text" value="calendly.com/yana-senina" style="width:220px;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit"/></div>');
+}
+
+draw();
+</script>
